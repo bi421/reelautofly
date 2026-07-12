@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Provider {
+  INSTAGRAM
+  FACEBOOK
+}
+
+enum AccountStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum JobStatus {
+  QUEUED
+  SCRIPTING
+  RENDERING
+  GUARD_CHECK
+  READY
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  accounts      Account[]
+  products      Product[]
+  reelJobs      ReelJob[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String         @id @default(cuid())
+  userId            String
+  provider          Provider
+  providerUserId    String
+  pageId            String?
+  /// Must be encrypted with AES-256-GCM before storage
+  encryptedAccessToken String   @db.Text
+  tokenExpiresAt    DateTime?
+  status            AccountStatus  @default(ACTIVE)
+  lastRefreshedAt   DateTime?
+  createdAt         DateTime       @default(now())
+
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs   ReelJob[]
+
+  @@unique([userId, provider, providerUserId])
+  @@index([userId])
+  @@index([providerUserId])
+  @@map("accounts")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  userId         String
+  originalImages String[]
+  createdAt      DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reelJobs ReelJob[]
+
+  @@index([userId])
+  @@map("products")
+}
+
+model ReelJob {
+  id                 String      @id @default(cuid())
+  productId          String
+  userId             String
+  connectedAccountId String?
+  status             JobStatus   @default(QUEUED)
+  videoUrl           String?
+  scriptData         Json?
+  guardResult        Json?
+  publishResult      Json?
+  attempts           Int         @default(0)
+  errorMessage       String?
+  scheduledAt        DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account?  @relation(fields: [connectedAccountId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("reel_jobs")
+}
