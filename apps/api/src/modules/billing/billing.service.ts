@@ -162,7 +162,10 @@ export class BillingService {
     const providerSubscriptionId = object.id
     const priceId = object.items?.data?.[0]?.price?.id
     const plan = (object.metadata?.plan || PRICE_TO_PLAN[priceId] || 'FREE') as 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE'
-    const status = event.type === 'customer.subscription.deleted' ? 'CANCELED' : object.status.toUpperCase()
+    const rawStatus = event.type === 'customer.subscription.deleted' ? 'CANCELED' : String(object.status || '').toUpperCase()
+    const status = (['ACTIVE', 'PAST_DUE', 'CANCELED', 'UNPAID', 'INCOMPLETE'] as const).includes(rawStatus as any)
+      ? rawStatus as 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'UNPAID' | 'INCOMPLETE'
+      : 'INCOMPLETE'
     if (!userId && !providerSubscriptionId) return
 
     const existing = await db.subscription.findFirst({
@@ -176,7 +179,7 @@ export class BillingService {
         providerCustomerId: object.customer || existing.providerCustomerId,
         providerSubscriptionId,
         plan: status === 'CANCELED' ? 'FREE' : plan,
-        status: status as any,
+        status,
         currentPeriodEnd: object.current_period_end ? new Date(object.current_period_end * 1000) : null,
         cancelAtPeriodEnd: Boolean(object.cancel_at_period_end),
       },
