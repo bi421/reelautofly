@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, createHmac, randomBytes } from 'node:crypto'
 import { db } from '@reelautofly/db'
 import { encrypt, decrypt, maskToken } from '@reelautofly/shared'
 import type { ConnectAccountDto } from './dto'
@@ -86,7 +86,13 @@ export class ConnectedAccountsService {
     }
 
     const pagesResponse = await fetch(
-      `https://graph.facebook.com/${version}/me/accounts?fields=id,name,access_token,tasks,instagram_business_account&access_token=${encodeURIComponent(longLived.access_token)}`,
+      (() => {
+        const url = new URL(`https://graph.facebook.com/${version}/me/accounts`)
+        url.searchParams.set('fields', 'id,name,access_token,tasks,instagram_business_account')
+        url.searchParams.set('access_token', longLived.access_token!)
+        if (appSecret) url.searchParams.set('appsecret_proof', createHmac('sha256', appSecret).update(longLived.access_token!).digest('hex'))
+        return url.toString()
+      })(),
     )
     const pagesData = await pagesResponse.json() as {
       data?: Array<{ id: string; name?: string; access_token?: string; instagram_business_account?: { id: string } }>
@@ -187,8 +193,15 @@ export class ConnectedAccountsService {
       const parts = account.encryptedAccessToken.split(':')
       if (parts.length !== 3) return { valid: false, reason: 'Invalid token format' }
       const plainToken = decrypt(parts[0], parts[1], parts[2], key)
-      const version = process.env.META_GRAPH_API_VERSION || 'v20.0'
-      const response = await fetch('https://graph.facebook.com/' + version + '/me?fields=id,name&access_token=' + encodeURIComponent(plainToken))
+      const version = process.env.META_GRAPH_API_VERSION
+      if (!version) return { valid: false, reason: 'Meta Graph API version is not configured' }
+      const appSecret = process.env.META_APP_SECRET
+      const proof = appSecret ? createHmac('sha256', appSecret).update(plainToken).digest('hex') : undefined
+      const url = new URL('https://graph.facebook.com/' + version + '/me')
+      url.searchParams.set('fields', 'id,name')
+      url.searchParams.set('access_token', plainToken)
+      if (proof) url.searchParams.set('appsecret_proof', proof)
+      const response = await fetch(url)
       const data = await response.json() as { id?: string; name?: string; error?: { message?: string } }
       if (!response.ok || data.error) {
         await db.account.update({ where: { id: account.id }, data: { status: 'EXPIRED' } })
