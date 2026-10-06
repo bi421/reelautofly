@@ -134,6 +134,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1085.0
+        version: 3.1085.0
       '@reelautofly/db':
         specifier: workspace:*
         version: link:../../packages/db
