@@ -10,7 +10,6 @@ export class AccountsController {
   @Post('test')
   async test(@Req() req: any, @Body() body: unknown): Promise<{ ok: boolean; message?: string; error?: string }> {
     const dto = ConnectAccountSchema.parse(body)
-    await this.service.assertUser(req.userId)
     return { ok: true, message: `Format valid for ${dto.provider} provider` }
   }
 
