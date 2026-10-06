@@ -23,21 +23,11 @@ interface JobResponse {
 export class JobsController {
   @Get()
   async findAll(@Req() req: any): Promise<JobResponse[]> {
-    const userId = req.headers['x-user-id'] as string
-    if (!userId) {
-      return []
-    }
-
     const jobs = await db.reelJob.findMany({
-      where: { userId },
+      where: { userId: req.userId },
       include: {
         account: {
-          select: {
-            id: true,
-            provider: true,
-            providerUserId: true,
-            status: true,
-          },
+          select: { id: true, provider: true, providerUserId: true, status: true },
         },
       },
       orderBy: { createdAt: 'desc' },
