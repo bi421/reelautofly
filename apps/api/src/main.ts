@@ -12,7 +12,7 @@ function parseCookies(header: string | undefined): Record<string, string> {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create(AppModule, { rawBody: true })
   app.enableCors({
     origin: process.env.WEB_ORIGIN?.split(',').map((value) => value.trim()) ?? ['http://localhost:3000'],
     credentials: true,
