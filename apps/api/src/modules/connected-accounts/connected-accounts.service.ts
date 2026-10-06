@@ -87,9 +87,9 @@ export class ConnectedAccountsService {
     return { success: true }
   }
 
-  async validateToken(accountId: string): Promise<ValidateTokenResponse> {
-    const account = await db.account.findUnique({
-      where: { id: accountId },
+  async validateToken(userId: string, accountId: string): Promise<ValidateTokenResponse> {
+    const account = await db.account.findFirst({
+      where: { id: accountId, userId },
     })
 
     if (!account) {
