@@ -5,9 +5,9 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "db:generate": "prisma generate --schema=packages/db/prisma/schema.prisma",
-    "db:push": "prisma db push --schema=packages/db/prisma/schema.prisma",
-    "db:migrate:deploy": "prisma migrate deploy --schema=packages/db/prisma/schema.prisma"
+    "db:generate": "pnpm --filter @reelautofly/db exec prisma generate --schema=prisma/schema.prisma",
+    "db:push": "pnpm --filter @reelautofly/db exec prisma db push --schema=prisma/schema.prisma",
+    "db:migrate:deploy": "pnpm --filter @reelautofly/db exec prisma migrate deploy --schema=prisma/schema.prisma"
   },
   "devDependencies": {
     "turbo": "^2.5.4"

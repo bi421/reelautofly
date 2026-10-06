@@ -60,7 +60,6 @@ export class BillingService {
 
     const params = new URLSearchParams({
       mode: 'subscription',
-      customer: customerId,
       'line_items[0][price]': price,
       'line_items[0][quantity]': '1',
       success_url: `${baseUrl.replace(/\/$/, '')}/billing?success=1`,
@@ -70,6 +69,9 @@ export class BillingService {
       'metadata[userId]': user.id,
       'metadata[plan]': plan,
     })
+    const checkoutCustomerId = customerId
+    if (!checkoutCustomerId) throw new InternalServerErrorException('Stripe customer creation failed')
+    params.set('customer', checkoutCustomerId)
     const session = await this.stripe('checkout/sessions', params)
     return { url: session.url, sessionId: session.id }
   }
