@@ -18,6 +18,21 @@ enum AccountStatus {
   REVOKED
 }
 
+enum Plan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
+
 enum JobStatus {
   QUEUED
   SCRIPTING
@@ -40,6 +55,7 @@ model User {
   products      Product[]
   reelJobs      ReelJob[]
   sessions      Session[]
+  subscription  Subscription?
 
   @@map("users")
 }
@@ -118,4 +134,40 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  provider               String             @default("stripe")
+  providerCustomerId     String?            @unique
+  providerSubscriptionId String?            @unique
+  plan                   Plan               @default(FREE)
+  status                 SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([plan, status])
+  @@map("subscriptions")
+}
+
+model BillingEvent {
+  id              String   @id @default(cuid())
+  provider        String
+  providerEventId String
+  payloadHash     String
+  type            String
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+  status          String   @default("RECEIVED")
+  errorMessage    String?
+
+  @@unique([provider, providerEventId])
+  @@index([receivedAt])
+  @@map("billing_events")
 }
