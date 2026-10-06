@@ -27,10 +27,7 @@ export default function UploadPage() {
       for (const file of files) {
         const presignRes = await fetch('/api/upload/presign', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': 'demo-user',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fileName: file.name,
             contentType: file.type,
@@ -51,10 +48,7 @@ export default function UploadPage() {
 
       const productRes = await fetch('/api/products', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': 'demo-user',
-        },
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ originalImages: imageUrls }),
       })
       const data = await productRes.json()
