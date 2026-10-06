@@ -19,10 +19,7 @@ export default function ConnectPage() {
     try {
       const res = await fetch('/api/accounts/test', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': 'demo-user',
-        },
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider,
           providerUserId,
@@ -46,10 +43,7 @@ export default function ConnectPage() {
     try {
       const res = await fetch('/api/accounts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': 'demo-user',
-        },
+          headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           provider,
           providerUserId,
