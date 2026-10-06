@@ -1,10 +1,22 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common'
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } from 'node:crypto'
-import { promisify } from 'node:util'
 import { db } from '@reelautofly/db'
 
-const scrypt = promisify(scryptCallback)
 const SESSION_DAYS = 30
+
+function scryptAsync(
+  password: string,
+  salt: Buffer,
+  keylen: number,
+  options: { N: number; r: number; p: number },
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    scryptCallback(password, salt, keylen, options, (error, derived) => {
+      if (error) reject(error)
+      else resolve(derived as Buffer)
+    })
+  })
+}
 
 function hashSession(token: string): string {
   return createHash('sha256').update(token).digest('hex')
@@ -12,7 +24,7 @@ function hashSession(token: string): string {
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16)
-  const derived = (await scrypt(password, salt, 64, { N: 16384, r: 8, p: 1 })) as Buffer
+  const derived = await scryptAsync(password, salt, 64, { N: 16384, r: 8, p: 1 })
   return `scrypt$16384$8$1$${salt.toString('base64url')}$${derived.toString('base64url')}`
 }
 
@@ -21,7 +33,7 @@ async function verifyPassword(password: string, encoded: string): Promise<boolea
   if (!n || !r || !p || !saltText || !hashText) return false
   const salt = Buffer.from(saltText, 'base64url')
   const expected = Buffer.from(hashText, 'base64url')
-  const derived = (await scrypt(password, salt, expected.length, { N: Number(n), r: Number(r), p: Number(p) })) as Buffer
+  const derived = await scryptAsync(password, salt, expected.length, { N: Number(n), r: Number(r), p: Number(p) })
   return timingSafeEqual(expected, derived)
 }
 
