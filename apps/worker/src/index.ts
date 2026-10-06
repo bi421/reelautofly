@@ -1,4 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { createReadStream } from 'node:fs'
 import { db } from '@reelautofly/db'
 import { renderReel } from '@reelautofly/remotion-templates'
 import type { GuardrailContext } from '@reelautofly/shared'
@@ -12,6 +14,40 @@ const redisConnection = {
 const queue = new Queue('reel-jobs', { connection: redisConnection })
 
 const publishService = new PublishService()
+
+function requireR2Client(): { client: S3Client; bucket: string } {
+  const endpoint = process.env.R2_ENDPOINT
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+  const bucket = process.env.R2_BUCKET
+  if (!endpoint || !accessKeyId || !secretAccessKey || !bucket) {
+    throw new Error('R2 storage is not configured')
+  }
+  return {
+    client: new S3Client({
+      endpoint,
+      region: 'auto',
+      forcePathStyle: true,
+      credentials: { accessKeyId, secretAccessKey },
+    }),
+    bucket,
+  }
+}
+
+async function uploadRenderedReel(outputPath: string, jobId: string): Promise<void> {
+  const { client, bucket } = requireR2Client()
+  const key = `reels/${jobId}.mp4`
+  try {
+    await client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: createReadStream(outputPath),
+      ContentType: 'video/mp4',
+    }))
+  } finally {
+    client.destroy()
+  }
+}
 
 async function processJob(job: Job<{ jobId: string }>) {
   const { jobId } = job.data
