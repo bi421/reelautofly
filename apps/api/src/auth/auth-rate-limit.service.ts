@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException, TooManyRequestsException } from '@nestjs/common'
+import { HttpException, HttpStatus, Injectable, ServiceUnavailableException } from '@nestjs/common'
 import { createHash } from 'node:crypto'
 import Redis from 'ioredis'
 
@@ -51,14 +51,17 @@ export class AuthRateLimitService {
       const counts = await Promise.all(keys.map((key) => this.redis.eval(INCREMENT_SCRIPT, 1, key, WINDOW_SECONDS)))
       const count = Math.max(...counts.map(Number))
       if (count > limit) {
-        throw new TooManyRequestsException({
-          code: 'AUTH_RATE_LIMITED',
-          message: 'Too many authentication attempts. Try again later.',
-          retryAfterSeconds: WINDOW_SECONDS,
-        })
+        throw new HttpException(
+          {
+            code: 'AUTH_RATE_LIMITED',
+            message: 'Too many authentication attempts. Try again later.',
+            retryAfterSeconds: WINDOW_SECONDS,
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        )
       }
     } catch (error) {
-      if (error instanceof TooManyRequestsException) throw error
+      if (error instanceof HttpException && error.getStatus() === HttpStatus.TOO_MANY_REQUESTS) throw error
       throw new ServiceUnavailableException('Authentication rate limiter unavailable')
     }
   }
