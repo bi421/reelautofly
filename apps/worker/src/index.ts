@@ -15,6 +15,39 @@ const queue = new Queue('reel-jobs', { connection: redisConnection })
 
 const publishService = new PublishService()
 
+async function schedulePublishRetry(jobId: string): Promise<void> {
+  const current = await db.reelJob.findUnique({ where: { id: jobId } })
+  if (!current) return
+
+  let delay = 0
+  if (current.status === 'QUEUED' && current.scheduledAt) {
+    delay = Math.max(0, current.scheduledAt.getTime() - Date.now())
+  } else if (current.status === 'READY' && current.attempts < 3) {
+    delay = Math.min(60_000, 5_000 * 2 ** Math.max(0, current.attempts - 1))
+  } else {
+    return
+  }
+
+  const retryId = `publish-${jobId}-${current.attempts}-${current.scheduledAt?.getTime() ?? 0}`
+  await queue.add('publish-only', { jobId }, {
+    jobId: retryId,
+    delay,
+    attempts: 1,
+    removeOnComplete: 100,
+    removeOnFail: 100,
+  })
+  console.log(`[worker] ${jobId} publish retry scheduled in ${delay}ms`)
+}
+
+async function processPublishOnly(jobId: string): Promise<void> {
+  const current = await db.reelJob.findUnique({ where: { id: jobId } })
+  if (!current) throw new Error(`ReelJob ${jobId} not found`)
+  if (!['QUEUED', 'READY'].includes(current.status)) return
+
+  await publishService.publishReelJob(jobId)
+  await schedulePublishRetry(jobId)
+}
+
 function requireR2Client(): { client: S3Client; bucket: string } {
   const endpoint = process.env.R2_ENDPOINT
   const accessKeyId = process.env.R2_ACCESS_KEY_ID
@@ -51,6 +84,11 @@ async function uploadRenderedReel(outputPath: string, jobId: string): Promise<vo
 
 async function processJob(job: Job<{ jobId: string }>) {
   const { jobId } = job.data
+  if (job.name === 'publish-only') {
+    console.log(`[worker] processing publish-only job ${jobId}`)
+    await processPublishOnly(jobId)
+    return
+  }
   console.log(`[worker] processing job ${jobId}`)
 
   const reelJob = await db.reelJob.findUnique({
@@ -245,26 +283,23 @@ async function processJob(job: Job<{ jobId: string }>) {
 
   try {
     await publishService.publishReelJob(jobId)
-    console.log(`[worker] ${jobId} published successfully`)
-  } catch (err) {
-    const currentJob = await db.reelJob.findUnique({ where: { id: jobId } })
-    const currentAttempts = currentJob?.attempts ?? 0
-
-    if (currentAttempts < 3) {
-      await db.reelJob.update({
-        where: { id: jobId },
-        data: { status: 'READY' },
-      })
-      console.log(`[worker] ${jobId} publish failed, retrying (attempt ${currentAttempts + 1}/3)`)
-      throw err
-    } else {
-      await db.reelJob.update({
-        where: { id: jobId },
-        data: { status: 'FAILED' },
-      })
-      console.log(`[worker] ${jobId} publish failed permanently after ${currentAttempts} attempts`)
-      throw err
+    await schedulePublishRetry(jobId)
+    const finalJob = await db.reelJob.findUnique({ where: { id: jobId } })
+    if (finalJob?.status === 'PUBLISHED') {
+      console.log(`[worker] ${jobId} published successfully`)
+    } else if (finalJob?.status === 'FAILED') {
+      console.log(`[worker] ${jobId} publish failed permanently`)
     }
+  } catch (err) {
+    await db.reelJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'FAILED',
+        errorMessage: `Worker publish orchestration failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        attempts: { increment: 1 },
+      },
+    })
+    throw err
   }
 }
 
