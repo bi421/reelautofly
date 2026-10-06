@@ -14,7 +14,7 @@ const PRICE_TO_PLAN: Record<string, 'PRO' | 'TEAM' | 'ENTERPRISE'> = {
 export class BillingService {
   private requireStripe() {
     const secret = process.env.STRIPE_SECRET_KEY
-    const baseUrl = process.env.QROS_PUBLIC_BASE_URL
+    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.QROS_PUBLIC_BASE_URL
     if (!secret || !baseUrl) throw new InternalServerErrorException('Stripe is not configured')
     return { secret, baseUrl }
   }
