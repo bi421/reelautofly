@@ -62,6 +62,30 @@ async function processJob(job: Job<{ jobId: string }>) {
     throw new Error(`ReelJob ${jobId} not found`)
   }
 
+  if (reelJob.product.userId !== reelJob.userId || (reelJob.account && reelJob.account.userId !== reelJob.userId)) {
+    await db.reelJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'FAILED',
+        errorMessage: 'Tenant integrity violation: job, product, and connected account owners do not match',
+        attempts: { increment: 1 },
+      },
+    })
+    throw new Error(`Tenant integrity violation for ReelJob ${jobId}`)
+  }
+
+  if (!reelJob.account) {
+    await db.reelJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'FAILED',
+        errorMessage: 'No connected account attached to job',
+        attempts: { increment: 1 },
+      },
+    })
+    throw new Error(`ReelJob ${jobId} has no connected account`)
+  }
+
   const product = reelJob.product
   const productName = `Product ${reelJob.productId}`
 
