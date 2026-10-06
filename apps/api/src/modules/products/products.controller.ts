@@ -39,6 +39,16 @@ export class ProductsController {
   @Post()
   async create(@Req() req: any, @Body() body: unknown): Promise<{ product: ProductResponse; job: JobResponse }> {
     const parsed = CreateProductSchema.parse(body)
+    const subscription = await db.subscription.findUnique({ where: { userId: req.userId } })
+    const plan = subscription?.status === 'ACTIVE' ? subscription.plan : 'FREE'
+    const limits = { FREE: 3, PRO: 100, TEAM: 500, ENTERPRISE: 10000 } as const
+    const startOfMonth = new Date()
+    startOfMonth.setUTCDate(1)
+    startOfMonth.setUTCHours(0, 0, 0, 0)
+    const used = await db.reelJob.count({ where: { userId: req.userId, createdAt: { gte: startOfMonth } } })
+    if (used >= limits[plan]) {
+      throw new Error(`Monthly job limit reached for ${plan} plan`)
+    }
 
     const product = await db.product.create({
       data: { userId: req.userId, originalImages: parsed.originalImages },
