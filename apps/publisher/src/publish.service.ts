@@ -103,6 +103,14 @@ export class PublishService {
       return
     }
 
+    // Exactly one worker/retry may claim a READY job for external publishing.
+    // This prevents concurrent queue deliveries from starting duplicate Meta publishes.
+    const claim = await db.reelJob.updateMany({
+      where: { id: jobId, status: 'READY' },
+      data: { status: 'PUBLISHING' },
+    })
+    if (claim.count !== 1) return
+
     const account = job.account
     const ctx = this.buildGuardContext()
     const inputs = this.buildGuardInputs(job, account)
