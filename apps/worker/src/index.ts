@@ -6,10 +6,22 @@ import { renderReel } from '@reelautofly/remotion-templates'
 import type { GuardrailContext } from '@reelautofly/shared'
 import { runAllGuards, PublishService } from '@reelautofly/publisher'
 
-const redisConnection = {
-  host: process.env.REDIS_HOST ?? 'localhost',
-  port: parseInt(process.env.REDIS_PORT ?? '6379'),
-}
+const redisUrl = process.env.REDIS_URL
+const redisConnection = redisUrl
+  ? (() => {
+      const parsed = new URL(redisUrl)
+      return {
+        host: parsed.hostname,
+        port: Number(parsed.port || (parsed.protocol === 'rediss:' ? 6380 : 6379)),
+        ...(parsed.username ? { username: decodeURIComponent(parsed.username) } : {}),
+        ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+        ...(parsed.protocol === 'rediss:' ? { tls: {} } : {}),
+      }
+    })()
+  : {
+      host: process.env.REDIS_HOST ?? 'localhost',
+      port: parseInt(process.env.REDIS_PORT ?? '6379'),
+    }
 
 const queue = new Queue('reel-jobs', { connection: redisConnection })
 
