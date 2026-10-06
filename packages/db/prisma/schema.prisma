@@ -32,12 +32,14 @@ enum JobStatus {
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
-  name      String
-  createdAt DateTime @default(now())
+  name         String
+  passwordHash String?
+  createdAt    DateTime @default(now())
 
   accounts      Account[]
   products      Product[]
   reelJobs      ReelJob[]
+  sessions      Session[]
 
   @@map("users")
 }
@@ -101,4 +103,19 @@ model ReelJob {
   @@index([status])
   @@index([scheduledAt])
   @@map("reel_jobs")
+}
+
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
 }
