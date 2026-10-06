@@ -1,39 +1,25 @@
 import { Controller, Post, Body, Req } from '@nestjs/common'
-import { db } from '@reelautofly/db'
 import { z } from 'zod'
 
 const PresignSchema = z.object({
-  fileName: z.string(),
-  contentType: z.string(),
+  fileName: z.string().min(1).max(200).regex(/^[a-zA-Z0-9._-]+$/),
+  contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
 })
 
 @Controller('upload')
 export class UploadController {
   @Post('presign')
   async presign(@Req() req: any, @Body() body: unknown) {
-    const userId = req.headers['x-user-id'] as string
-    if (!userId) {
-      return { error: 'x-user-id header required' }
-    }
-
     const parsed = PresignSchema.parse(body)
-    const key = `users/${userId}/${Date.now()}-${parsed.fileName}`
-
-    const endpoint = process.env.R2_ENDPOINT!
-    const bucket = process.env.R2_BUCKET!
-    const accessKey = process.env.R2_ACCESS_KEY_ID!
-    const secretKey = process.env.R2_SECRET_ACCESS_KEY!
-
-    const expiresIn = 3600
-    const url = `${endpoint}/${bucket}/${key}`
-
+    const endpoint = process.env.R2_PUBLIC_BASE_URL
+    if (!endpoint) throw new Error('R2_PUBLIC_BASE_URL is not configured')
+    const key = `users/${req.userId}/${Date.now()}-${parsed.fileName}`
     return {
-      url,
+      url: `${endpoint.replace(/\/$/, '')}/${key}`,
       method: 'PUT',
-      headers: {
-        'Content-Type': parsed.contentType,
-      },
+      headers: { 'Content-Type': parsed.contentType },
       key,
+      expiresIn: 900,
     }
   }
 }
