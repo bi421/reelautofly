@@ -177,6 +177,20 @@ async function processJob(job: Job<{ jobId: string }>) {
 
   const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, '')
   if (!publicBase) throw new Error('R2_PUBLIC_BASE_URL is not configured; Meta cannot fetch rendered videos')
+  try {
+    await uploadRenderedReel(renderResult.outputPath, jobId)
+  } catch (err) {
+    await db.reelJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'FAILED',
+        errorMessage: `R2 upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        attempts: { increment: 1 },
+      },
+    })
+    throw err
+  }
+
   const r2PublicUrl = `${publicBase}/reels/${jobId}.mp4`
 
   await db.reelJob.update({
