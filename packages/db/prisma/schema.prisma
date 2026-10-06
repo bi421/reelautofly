@@ -56,6 +56,7 @@ model User {
   reelJobs      ReelJob[]
   sessions      Session[]
   subscription  Subscription?
+  oauthStates    MetaOAuthState[]
 
   @@map("users")
 }
@@ -170,4 +171,20 @@ model BillingEvent {
   @@unique([provider, providerEventId])
   @@index([receivedAt])
   @@map("billing_events")
+}
+
+model MetaOAuthState {
+  id        String   @id @default(cuid())
+  userId    String
+  provider  Provider
+  stateHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+  @@map("meta_oauth_states")
 }

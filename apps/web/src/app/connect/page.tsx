@@ -13,6 +13,19 @@ export default function ConnectPage() {
   const [maskedToken, setMaskedToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const connectWithMeta = async (selectedProvider: Provider) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/connected-accounts/meta/oauth/start?provider=${selectedProvider}`, { credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok || !data.url) throw new Error(data.message || 'Meta OAuth is not configured')
+      window.location.assign(data.url)
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : 'Meta OAuth failed')
+      setLoading(false)
+    }
+  }
+
   const testConnection = async () => {
     setLoading(true)
     setStatus(null)
@@ -69,7 +82,12 @@ export default function ConnectPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="text-2xl font-bold">Connect Account</h1>
-      <p className="mt-1 text-sm text-gray-500">Bring your own Meta API access token.</p>
+      <p className="mt-1 text-sm text-gray-500">Connect Meta securely with OAuth, or use a token for controlled testing.</p>
+
+      <div className="mt-6 flex gap-3">
+        <button onClick={() => connectWithMeta('INSTAGRAM')} disabled={loading} className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Connect Instagram with Meta</button>
+        <button onClick={() => connectWithMeta('FACEBOOK')} disabled={loading} className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50">Connect Facebook Page</button>
+      </div>
 
       <div className="mt-6 flex gap-2 border-b">
         <button
