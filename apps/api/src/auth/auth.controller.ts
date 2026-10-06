@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common'
 import { z } from 'zod'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
+import { AuthRateLimitService } from './auth-rate-limit.service'
 
 const Credentials = z.object({
   email: z.string().email().max(320),
@@ -29,19 +30,21 @@ function setSessionCookie(res: Response, token: string) {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(private readonly auth: AuthService, private readonly rateLimit: AuthRateLimitService) {}
 
   @Post('signup')
-  async signup(@Body() body: unknown, @Res({ passthrough: true }) res: Response) {
+  async signup(@Req() req: any, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
     const input = Credentials.extend({ name: z.string().min(1).max(120) }).parse(body)
+    await this.rateLimit.assertAllowed('signup', req, input.email)
     const result = await this.auth.signup(input.email, input.password, input.name)
     setSessionCookie(res, result.token)
     return { user: result.user }
   }
 
   @Post('login')
-  async login(@Body() body: unknown, @Res({ passthrough: true }) res: Response) {
+  async login(@Req() req: any, @Body() body: unknown, @Res({ passthrough: true }) res: Response) {
     const input = Credentials.parse(body)
+    await this.rateLimit.assertAllowed('login', req, input.email)
     const result = await this.auth.login(input.email, input.password)
     setSessionCookie(res, result.token)
     return { user: result.user }

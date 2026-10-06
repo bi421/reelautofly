@@ -18,7 +18,8 @@
     "@reelautofly/shared": "workspace:*",
     "zod": "^3.24.4",
     "@prisma/client": "^6.8.2",
-    "bullmq": "^5.52.3"
+    "bullmq": "^5.52.3",
+    "ioredis": "^5.6.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.0",
