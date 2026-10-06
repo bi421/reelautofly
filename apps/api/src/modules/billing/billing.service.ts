@@ -70,7 +70,7 @@ export class BillingService {
       'metadata[userId]': user.id,
       'metadata[plan]': plan,
     })
-    const session = await this.stripe('checkout/sessions', params)
+    const checkoutCustomerId = customerId\n    if (!checkoutCustomerId) throw new InternalServerErrorException('Stripe customer creation failed')\n    params.set('customer', checkoutCustomerId)\n    const session = await this.stripe('checkout/sessions', params)
     return { url: session.url, sessionId: session.id }
   }
 
