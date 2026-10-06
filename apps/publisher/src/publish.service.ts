@@ -381,14 +381,9 @@ export class PublishService {
       if (parts.length !== 3) return false
       const plainToken = decrypt(parts[0], parts[1], parts[2], process.env.ENCRYPTION_KEY_32_BYTES!)
 
-      // Placeholder for token refresh logic
-      // const response = await fetch(`https://graph.facebook.com/${META_API_VERSION}/oauth/access_token?...`)
-      // const data = await response.json()
-      // const newToken = data.access_token
-      // const encrypted = encrypt(newToken, process.env.ENCRYPTION_KEY_32_BYTES!)
-      // await db.account.update({ where: { id: accountId }, data: { encryptedAccessToken: `${encrypted.iv}:${encrypted.authTag}:${encrypted.encryptedData}`, status: 'ACTIVE', lastRefreshedAt: new Date() } })
-
-      return true
+      // No provider-specific refresh flow is implemented yet.
+      // Never claim a token was refreshed when it was not.
+      return false
     } catch {
       return false
     }

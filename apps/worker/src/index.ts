@@ -77,7 +77,9 @@ async function processJob(job: Job<{ jobId: string }>) {
     throw err
   }
 
-  const r2PublicUrl = `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET}/reels/${jobId}.mp4`
+  const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, '')
+  if (!publicBase) throw new Error('R2_PUBLIC_BASE_URL is not configured; Meta cannot fetch rendered videos')
+  const r2PublicUrl = `${publicBase}/reels/${jobId}.mp4`
 
   await db.reelJob.update({
     where: { id: jobId },
