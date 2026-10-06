@@ -11,6 +11,12 @@ const Credentials = z.object({
 
 const COOKIE = 'raf_session'
 
+function cookieToken(req: any): string | undefined {
+  const header = req.headers.cookie as string | undefined
+  const value = header?.split(';').map((v: string) => v.trim()).find((v: string) => v.startsWith(`${COOKIE}=`))
+  return value ? decodeURIComponent(value.slice(COOKIE.length + 1)) : undefined
+}
+
 function setSessionCookie(res: Response, token: string) {
   res.cookie(COOKIE, token, {
     httpOnly: true,
@@ -43,15 +49,18 @@ export class AuthController {
 
   @Post('logout')
   async logout(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    await this.auth.revokeSession(req.cookies?.[COOKIE])
+    await this.auth.revokeSession(cookieToken(req))
     res.clearCookie(COOKIE, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' })
     return { ok: true }
   }
 
   @Get('me')
   async me(@Req() req: any) {
-    if (!req.userId) return { user: null }
-    const user = await this.authUser(req.userId)
+    const authorization = req.headers.authorization as string | undefined
+    const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined
+    const session = await this.auth.resolveSession(bearer || cookieToken(req))
+    if (!session) return { user: null }
+    const user = await this.authUser(session.userId)
     return { user }
   }
 
