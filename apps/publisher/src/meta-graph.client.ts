@@ -43,6 +43,8 @@ export class MetaGraphError extends Error {
   }
 }
 
+import { createHmac } from 'node:crypto'
+
 export type MetaGraphClientOptions = {
   apiVersion?: string
   accessToken?: string
@@ -53,7 +55,8 @@ export class MetaGraphClient {
   private readonly defaultAccessToken?: string
 
   constructor(options: MetaGraphClientOptions = {}) {
-    const version = options.apiVersion || process.env.META_GRAPH_API_VERSION || 'v20.0'
+    const version = options.apiVersion || process.env.META_GRAPH_API_VERSION
+    if (!version) throw new Error('META_GRAPH_API_VERSION is not configured')
     this.baseUrl = `https://graph.facebook.com/${version}`
     this.defaultAccessToken = options.accessToken
   }
@@ -69,9 +72,13 @@ export class MetaGraphClient {
     let url = `${this.baseUrl}${path}`
     const body = new URLSearchParams()
 
+    const appSecret = process.env.META_APP_SECRET
+    const appSecretProof = token && appSecret ? createHmac('sha256', appSecret).update(token).digest('hex') : undefined
+
     if (isGet) {
       const separator = path.includes('?') ? '&' : '?'
       url = `${url}${separator}access_token=${encodeURIComponent(token!)}`
+      if (appSecretProof) url += `&appsecret_proof=${appSecretProof}`
     } else {
       if (options.body) {
         const params = new URLSearchParams(options.body as string)
@@ -80,6 +87,7 @@ export class MetaGraphClient {
         })
       }
       body.set('access_token', token!)
+      if (appSecretProof) body.set('appsecret_proof', appSecretProof)
     }
 
     const response = await fetch(url, {
