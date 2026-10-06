@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Get } from '@nestjs/common'
+import { Controller, Post, Body, Req, Get, ForbiddenException } from '@nestjs/common'
 import { db } from '@reelautofly/db'
 import { z } from 'zod'
 import { Queue } from 'bullmq'
@@ -47,7 +47,7 @@ export class ProductsController {
     startOfMonth.setUTCHours(0, 0, 0, 0)
     const used = await db.reelJob.count({ where: { userId: req.userId, createdAt: { gte: startOfMonth } } })
     if (used >= limits[plan]) {
-      throw new Error(`Monthly job limit reached for ${plan} plan`)
+      throw new ForbiddenException({ code: 'MONTHLY_LIMIT_REACHED', plan, limit: limits[plan], used })
     }
 
     const product = await db.product.create({
