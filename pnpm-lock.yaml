@@ -35,6 +35,9 @@ importers:
       bullmq:
         specifier: ^5.52.3
         version: 5.80.1
+      ioredis:
+        specifier: ^5.6.1
+        version: 5.11.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
