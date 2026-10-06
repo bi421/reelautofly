@@ -6,7 +6,7 @@ import { runAllGuards, type RunAllGuardsInput } from './guards/orchestrator'
 import type { GuardrailContext, GuardrailResult } from '@reelautofly/shared'
 import { alertOps } from './alerts'
 
-const META_API_VERSION = process.env.META_GRAPH_API_VERSION || 'v20.0'
+const META_API_VERSION = process.env.META_GRAPH_API_VERSION
 
 export class PublishService {
   private readonly metaClient: MetaGraphClient
