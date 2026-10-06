@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Post, Body, Req, Get, ForbiddenException } from '@nestjs/common'
+import { BadRequestException, Controller, Post, Body, Req, Get, ForbiddenException, ServiceUnavailableException } from '@nestjs/common'
 import { db } from '@reelautofly/db'
 import { z } from 'zod'
 import { Queue } from 'bullmq'
@@ -31,13 +31,39 @@ export class ProductsController {
       : await db.account.findFirst({ where: { userId: req.userId, status: 'ACTIVE' }, orderBy: { createdAt: 'asc' } })
     if (!account) throw new BadRequestException('Connect an active Meta account before creating a Reel job')
 
-    const product = await db.product.create({ data: { userId: req.userId, originalImages: parsed.originalImages } })
-    const job = await db.reelJob.create({
-      data: { productId: product.id, userId: req.userId, connectedAccountId: account.id, status: 'QUEUED' },
+    const { product, job } = await db.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: { userId: req.userId, originalImages: parsed.originalImages },
+      })
+      const job = await tx.reelJob.create({
+        data: {
+          productId: product.id,
+          userId: req.userId,
+          connectedAccountId: account.id,
+          status: 'QUEUED',
+        },
+      })
+      return { product, job }
     })
-    await queue.add('render-and-publish', { jobId: job.id }, {
-      attempts: 3, backoff: { type: 'exponential', delay: 5000 }, removeOnComplete: 100, removeOnFail: 50,
-    })
+
+    try {
+      await queue.add('render-and-publish', { jobId: job.id }, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      })
+    } catch (err) {
+      await db.reelJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: `Queue submission failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        },
+      })
+      throw new ServiceUnavailableException('Job queue is temporarily unavailable')
+    }
+
     return { product, job }
   }
 
