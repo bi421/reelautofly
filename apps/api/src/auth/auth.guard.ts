@@ -7,7 +7,7 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest()
-    if (req.method === 'OPTIONS' || req.url.startsWith('/auth/') || req.url === '/healthz' || req.url === '/readyz') return true
+    if (req.method === 'OPTIONS' || req.url.startsWith('/auth/') || req.url === '/healthz' || req.url === '/readyz' || req.url === '/billing/webhook') return true
 
     const authorization = req.headers.authorization as string | undefined
     const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined
