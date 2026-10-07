@@ -8,6 +8,7 @@ type Job = {
   attempts: number
   errorMessage: string | null
   scheduledAt: string | null
+  videoUrl: string | null
   guardResult: any
   publishResult: any
   account?: {
@@ -20,24 +21,25 @@ type Job = {
 export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchJobs = async () => {
     try {
-      const res = await fetch('/api/jobs', {
-        headers: { 'x-user-id': 'demo-user' },
-      })
+      const res = await fetch('/api/jobs', { credentials: 'include' })
+      if (!res.ok) throw new Error('Unable to load jobs')
       const data = await res.json()
-      setJobs(data)
-    } catch (e) {
-      console.error('Failed to fetch jobs')
+      setJobs(Array.isArray(data) ? data : [])
+      setError(null)
+    } catch {
+      setError('Unable to load jobs. Please sign in again if your session expired.')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchJobs()
-    const interval = setInterval(fetchJobs, 5000)
+    void fetchJobs()
+    const interval = setInterval(() => void fetchJobs(), 5000)
     return () => clearInterval(interval)
   }, [])
 
@@ -56,6 +58,8 @@ export default function JobsPage() {
       <h1 className="text-2xl font-bold">Jobs</h1>
       <p className="mt-1 text-sm text-gray-500">Auto-refreshes every 5 seconds.</p>
 
+      {error && <p className="mt-6 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+
       {loading ? (
         <p className="mt-6 text-sm text-gray-500">Loading...</p>
       ) : jobs.length === 0 ? (
@@ -68,6 +72,7 @@ export default function JobsPage() {
                 <th className="px-4 py-2 text-left font-medium text-gray-600">ID</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-600">Status</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-600">Account</th>
+                <th className="px-4 py-2 text-left font-medium text-gray-600">Output</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-600">Guard Result</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-600">Publish Result</th>
                 <th className="px-4 py-2 text-left font-medium text-gray-600">Scheduled At</th>
@@ -82,12 +87,16 @@ export default function JobsPage() {
                     <span className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${statusColor(job.status)}`}>
                       {job.status}
                     </span>
+                    {job.errorMessage && <p className="mt-1 max-w-xs text-xs text-red-600">{job.errorMessage}</p>}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
                     {job.account ? `${job.account.provider} ${job.account.providerUserId}` : '-'}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
-                    {job.guardResult ? `${job.guardResult.failedGuards?.length ? `Failed: ${job.guardResult.failedGuards.join(', ')}` : 'Passed'}` : '-'}
+                    {job.videoUrl ? <a href={job.videoUrl} target="_blank" rel="noreferrer" className="underline">Open reel</a> : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    {job.guardResult ? (job.guardResult.failedGuards?.length ? `Failed: ${job.guardResult.failedGuards.join(', ')}` : 'Passed') : '-'}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">
                     {job.publishResult?.igMediaId ? `IG: ${job.publishResult.igMediaId}` : job.publishResult?.fbPostId ? `FB: ${job.publishResult.fbPostId}` : '-'}
