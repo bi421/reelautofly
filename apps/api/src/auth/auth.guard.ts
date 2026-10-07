@@ -14,6 +14,15 @@ function sessionCookie(req: any): string | undefined {
   }
 }
 
+function bearerToken(req: any): string | undefined {
+  const authorization = req.headers.authorization as string | undefined
+  if (!authorization) return undefined
+  if (!authorization.startsWith('Bearer ')) throw new UnauthorizedException('Invalid authorization scheme')
+  const token = authorization.slice(7).trim()
+  if (!token) throw new UnauthorizedException('Bearer token is required')
+  return token
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private readonly auth: AuthService) {}
@@ -22,9 +31,8 @@ export class AuthGuard implements CanActivate {
     const req = context.switchToHttp().getRequest()
     if (req.method === 'OPTIONS' || req.url.startsWith('/auth/') || req.url === '/healthz' || req.url === '/readyz' || req.url === '/billing/webhook') return true
 
-    const authorization = req.headers.authorization as string | undefined
-    const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined
-    const session = await this.auth.resolveSession(bearer || sessionCookie(req))
+    const token = bearerToken(req) ?? sessionCookie(req)
+    const session = await this.auth.resolveSession(token)
     if (!session) throw new UnauthorizedException('Authentication required')
     req.userId = session.userId
     req.sessionId = session.id
