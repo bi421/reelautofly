@@ -10,8 +10,32 @@ const CreateProductSchema = z.object({
 interface ProductResponse { id: string; userId: string; originalImages: string[]; createdAt: Date }
 interface JobResponse { id: string; productId: string; userId: string; status: string; attempts: number; createdAt: Date }
 interface ProductWithJobs extends ProductResponse { reelJobs: JobResponse[] }
-const redisConnection = { host: process.env.REDIS_HOST ?? 'localhost', port: parseInt(process.env.REDIS_PORT ?? '6379') }
-const queue = new Queue('reel-jobs', { connection: redisConnection })
+
+function getRedisConnection() {
+  const redisUrl = process.env.REDIS_URL
+  if (redisUrl) {
+    const parsed = new URL(redisUrl)
+    if (!['redis:', 'rediss:'].includes(parsed.protocol)) {
+      throw new Error('REDIS_URL must use redis:// or rediss://')
+    }
+    return {
+      host: parsed.hostname,
+      port: Number(parsed.port || (parsed.protocol === 'rediss:' ? 6380 : 6379)),
+      ...(parsed.username ? { username: decodeURIComponent(parsed.username) } : {}),
+      ...(parsed.password ? { password: decodeURIComponent(parsed.password) } : {}),
+      ...(parsed.protocol === 'rediss:' ? { tls: {} } : {}),
+    }
+  }
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('REDIS_URL is required in production')
+  }
+  return {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: parseInt(process.env.REDIS_PORT ?? '6379'),
+  }
+}
+
+const queue = new Queue('reel-jobs', { connection: getRedisConnection() })
 
 @Controller('products')
 export class ProductsController {
