@@ -7,7 +7,6 @@
   "scripts": {
     "build": "tsc",
     "lint": "echo 'no lint'",
-    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
