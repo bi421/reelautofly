@@ -2,6 +2,15 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "rootDir": "../../"
+    "rootDir": "../../",
+    "baseUrl": ".",
+    "paths": {
+      "@reelautofly/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@reelautofly/db": [
+        "../../packages/db/src/index.ts"
+      ]
+    }
   }
 }
