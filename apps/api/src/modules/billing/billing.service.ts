@@ -87,20 +87,38 @@ export class BillingService {
     return { url: session.url }
   }
 
-  verifySignature(rawBody: Buffer, header: string | undefined): boolean {
+  // Stripe may send multiple v1 signatures during secret rotation; any valid one is sufficient.\n  verifySignature(rawBody: Buffer, header: string | undefined): boolean {
     const secret = process.env.STRIPE_WEBHOOK_SECRET
     if (!secret || !header) return false
-    const parts = Object.fromEntries(header.split(',').map((part) => {
-      const [key, value] = part.split('=')
-      return [key, value]
-    }))
-    const timestamp = Number(parts.t)
-    const signature = parts.v1
-    if (!timestamp || !signature || Math.abs(Date.now() / 1000 - timestamp) > 300) return false
-    const expected = createHmac('sha256', secret).update(`${timestamp}.${rawBody.toString('utf8')}`).digest('hex')
-    const a = Buffer.from(expected, 'utf8')
-    const b = Buffer.from(signature, 'utf8')
-    return a.length === b.length && timingSafeEqual(a, b)
+
+    const timestampValues: string[] = []
+    const signatures: string[] = []
+
+    for (const part of header.split(',')) {
+      const separator = part.indexOf('=')
+      if (separator <= 0) continue
+      const key = part.slice(0, separator).trim()
+      const value = part.slice(separator + 1).trim()
+      if (!value) continue
+      if (key === 't') timestampValues.push(value)
+      if (key === 'v1') signatures.push(value)
+    }
+
+    if (timestampValues.length !== 1 || signatures.length === 0) return false
+
+    const timestamp = Number(timestampValues[0])
+    if (!Number.isInteger(timestamp) || timestamp <= 0) return false
+    if (Math.abs(Date.now() / 1000 - timestamp) > 300) return false
+
+    const expected = createHmac('sha256', secret)
+      .update(`${timestamp}.${rawBody.toString('utf8')}`)
+      .digest('hex')
+    const expectedBuffer = Buffer.from(expected, 'utf8')
+
+    return signatures.some((signature) => {
+      const candidate = Buffer.from(signature, 'utf8')
+      return candidate.length === expectedBuffer.length && timingSafeEqual(expectedBuffer, candidate)
+    })
   }
 
   async handleWebhook(rawBody: Buffer, signature: string | undefined) {
