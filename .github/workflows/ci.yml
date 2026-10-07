@@ -43,13 +43,22 @@ jobs:
       DATABASE_URL: postgresql://reelautofly:password@localhost:5432/reelautofly
       REDIS_HOST: localhost
       REDIS_PORT: 6379
+      REDIS_URL: redis://localhost:6379
       NODE_ENV: test
       WEB_ORIGIN: http://localhost:3000
       ENCRYPTION_KEY_32_BYTES: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      META_GRAPH_API_VERSION: v26.0
+      META_APP_ID: test
+      META_APP_SECRET: test
+      META_OAUTH_REDIRECT_URI: http://localhost:3000/api/auth/meta/callback
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_test_placeholder
+      PUBLIC_BASE_URL: http://localhost:3000
       R2_ENDPOINT: https://example.r2.cloudflarestorage.com
       R2_ACCESS_KEY_ID: test
       R2_SECRET_ACCESS_KEY: test
       R2_BUCKET: test
+      R2_PUBLIC_BASE_URL: https://example.r2.cloudflarestorage.com/test
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
