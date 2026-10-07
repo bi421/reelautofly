@@ -34,14 +34,20 @@ export default function UploadPage() {
           }),
         })
         const presign = await presignRes.json()
+        if (!presignRes.ok || !presign.url || !presign.key) {
+          throw new Error(presign.message || 'Unable to prepare image upload')
+        }
 
-        await fetch(presign.url, {
+        const uploadRes = await fetch(presign.url, {
           method: 'PUT',
           headers: {
             'Content-Type': file.type,
           },
           body: file,
         })
+        if (!uploadRes.ok) {
+          throw new Error(`Image upload failed for ${file.name}`)
+        }
 
         imageUrls.push(presign.key)
       }
@@ -52,11 +58,14 @@ export default function UploadPage() {
         body: JSON.stringify({ originalImages: imageUrls }),
       })
       const data = await productRes.json()
+      if (!productRes.ok) {
+        throw new Error(data.message || 'Unable to create product')
+      }
       setProduct(data)
       setStatus('Product uploaded and job created')
       setFiles([])
     } catch (e) {
-      setStatus('Upload failed')
+      setStatus(e instanceof Error ? e.message : 'Upload failed')
     } finally {
       setUploading(false)
     }
