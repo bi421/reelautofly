@@ -87,6 +87,7 @@ export class ProductsController {
 
     try {
       await queue.add('render-and-publish', { jobId: job.id }, {
+        jobId: job.id,
         attempts: 3,
         backoff: { type: 'exponential', delay: 5000 },
         removeOnComplete: 100,
