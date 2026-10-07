@@ -7,6 +7,7 @@ interface JobResponse {
   attempts: number
   errorMessage: string | null
   scheduledAt: Date | null
+  videoUrl: string | null
   guardResult: any
   publishResult: any
   account?: {
@@ -39,6 +40,7 @@ export class JobsController {
       attempts: job.attempts,
       errorMessage: job.errorMessage,
       scheduledAt: job.scheduledAt,
+      videoUrl: job.videoUrl,
       guardResult: job.guardResult,
       publishResult: job.publishResult,
       account: job.account as any,
