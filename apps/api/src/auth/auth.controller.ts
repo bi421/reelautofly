@@ -15,7 +15,12 @@ const COOKIE = 'raf_session'
 function cookieToken(req: any): string | undefined {
   const header = req.headers.cookie as string | undefined
   const value = header?.split(';').map((v: string) => v.trim()).find((v: string) => v.startsWith(`${COOKIE}=`))
-  return value ? decodeURIComponent(value.slice(COOKIE.length + 1)) : undefined
+  if (!value) return undefined
+  try {
+    return decodeURIComponent(value.slice(COOKIE.length + 1))
+  } catch {
+    return undefined
+  }
 }
 
 function setSessionCookie(res: Response, token: string) {
