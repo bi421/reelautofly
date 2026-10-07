@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "turbo run typecheck",
     "db:generate": "pnpm --filter @reelautofly/db exec prisma generate --schema=prisma/schema.prisma",
     "db:push": "pnpm --filter @reelautofly/db exec prisma db push --schema=prisma/schema.prisma",
     "db:migrate:deploy": "pnpm --filter @reelautofly/db exec prisma migrate deploy --schema=prisma/schema.prisma"
