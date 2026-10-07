@@ -110,15 +110,22 @@ async function processJob(job: Job<{ jobId: string }>) {
   await db.reelJob.update({ where: { id: jobId }, data: { status: 'SCRIPTING' } })
   const scriptData = { hook: 'New arrival', caption: `${productName} 🔥`, cta: 'Shop now', productName, price: undefined, videoHash: `${jobId}-script-v1`, captionHash: `${jobId}-caption-v1` }
   await db.reelJob.update({ where: { id: jobId }, data: { scriptData: scriptData as any, status: 'RENDERING' } })
+  const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, '')
+  if (!publicBase) throw new Error('R2_PUBLIC_BASE_URL is not configured; renderer cannot resolve product images')
+  const imagePrefix = 'users/' + reelJob.userId + '/'
+  if (product.originalImages.some((key) => !key.startsWith(imagePrefix) || key.includes('..') || key.includes('\\'))) {
+    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: 'Tenant integrity violation: product image key is outside the job owner namespace', attempts: { increment: 1 } } })
+    throw new Error('Tenant integrity violation for product image key in ReelJob ' + jobId)
+  }
+  const imageUrls = product.originalImages.map((key) =>
+    publicBase + '/' + key.split('/').map((segment) => encodeURIComponent(segment)).join('/'),
+  )
   let renderResult: { outputPath: string; metadata: { duration: number; width: number; height: number; sizeMB: number } }
   try {
-    renderResult = await renderReel('ProductShowcase', { images: product.originalImages, productName, price: undefined }, jobId)
-  } catch (err) {
+    renderResult = await renderReel('ProductShowcase', { images: imageUrls, productName, price: undefined }, jobId)  } catch (err) {
     await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `Render failed: ${err instanceof Error ? err.message : 'Unknown error'}`, attempts: { increment: 1 } } })
     throw err
   }
-  const publicBase = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, '')
-  if (!publicBase) throw new Error('R2_PUBLIC_BASE_URL is not configured; Meta cannot fetch rendered videos')
   try {
     await uploadRenderedReel(renderResult.outputPath, jobId)
   } catch (err) {
