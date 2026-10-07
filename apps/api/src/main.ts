@@ -14,28 +14,19 @@ function parseCookies(header: string | undefined): Record<string, string> {
 function requireProductionEnv(): void {
   if (process.env.NODE_ENV !== 'production') return
   const required = [
-    'DATABASE_URL',
-    'REDIS_URL',
-    'WEB_ORIGIN',
-    'R2_ENDPOINT',
-    'R2_ACCESS_KEY_ID',
-    'R2_SECRET_ACCESS_KEY',
-    'R2_BUCKET',
-    'R2_PUBLIC_BASE_URL',
-    'ENCRYPTION_KEY_32_BYTES',
-    'META_GRAPH_API_VERSION',
-    'META_APP_ID',
-    'META_APP_SECRET',
-    'META_OAUTH_REDIRECT_URI',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-    'PUBLIC_BASE_URL',
+    'DATABASE_URL', 'REDIS_URL', 'WEB_ORIGIN', 'R2_ENDPOINT',
+    'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET',
+    'R2_PUBLIC_BASE_URL', 'ENCRYPTION_KEY_32_BYTES',
+    'META_GRAPH_API_VERSION', 'META_APP_ID', 'META_APP_SECRET',
+    'META_OAUTH_REDIRECT_URI', 'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET', 'PUBLIC_BASE_URL',
   ]
   const missing = required.filter((name) => !process.env[name]?.trim())
   if (missing.length > 0) {
     throw new Error(`Production environment is incomplete: missing ${missing.join(', ')}`)
   }
-  if (!process.env.REDIS_URL.startsWith('redis://') && !process.env.REDIS_URL.startsWith('rediss://')) {
+  const redisUrl = process.env.REDIS_URL
+  if (!redisUrl || (!redisUrl.startsWith('redis://') && !redisUrl.startsWith('rediss://'))) {
     throw new Error('REDIS_URL must use redis:// or rediss:// in production')
   }
 }
