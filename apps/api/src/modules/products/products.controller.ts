@@ -41,7 +41,15 @@ const queue = new Queue('reel-jobs', { connection: getRedisConnection() })
 export class ProductsController {
   @Post()
   async create(@Req() req: any, @Body() body: unknown): Promise<{ product: ProductResponse; job: JobResponse }> {
-    const parsed = CreateProductSchema.parse(body)
+    const result = CreateProductSchema.safeParse(body)
+    if (!result.success) {
+      throw new BadRequestException({
+        code: 'INVALID_PRODUCT',
+        message: 'Invalid product payload',
+        issues: result.error.issues,
+      })
+    }
+    const parsed = result.data
     const subscription = await db.subscription.findUnique({ where: { userId: req.userId } })
     const plan = subscription?.status === 'ACTIVE' ? subscription.plan : 'FREE'
     const limits = { FREE: 3, PRO: 100, TEAM: 500, ENTERPRISE: 10000 } as const
