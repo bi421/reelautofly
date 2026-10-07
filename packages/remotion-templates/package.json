@@ -6,7 +6,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "lint": "echo 'no lint'"
+    "lint": "echo 'no lint'",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "remotion": "^4.0.291",
