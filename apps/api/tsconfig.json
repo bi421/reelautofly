@@ -9,7 +9,7 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": ".",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -17,10 +17,9 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
     "paths": {
-      "@reelautofly/shared": ["../shared/src/index.ts"],
-      "@reelautofly/db": ["../db/src/index.ts"]
+      "@reelautofly/shared": ["../../packages/shared/src/index.ts"],
+      "@reelautofly/db": ["../../packages/db/src/index.ts"]
     }
   }
 }
