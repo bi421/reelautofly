@@ -108,15 +108,39 @@ export class BillingService {
     const event = JSON.parse(rawBody.toString('utf8')) as StripeEvent
     const payloadHash = createHash('sha256').update(rawBody).digest('hex')
 
-    const existing = await db.billingEvent.findUnique({
+    let existing = await db.billingEvent.findUnique({
       where: { provider_providerEventId: { provider: 'stripe', providerEventId: event.id } },
     })
     if (existing?.status === 'PROCESSED') return { received: true, duplicate: true }
 
     if (!existing) {
-      await db.billingEvent.create({
-        data: { provider: 'stripe', providerEventId: event.id, payloadHash, type: event.type },
-      })
+      try {
+        existing = await db.billingEvent.create({
+          data: { provider: 'stripe', providerEventId: event.id, payloadHash, type: event.type },
+        })
+      } catch {
+        existing = await db.billingEvent.findUnique({
+          where: { provider_providerEventId: { provider: 'stripe', providerEventId: event.id } },
+        })
+      }
+    }
+
+    if (!existing) throw new InternalServerErrorException('Unable to record Stripe event')
+
+    const claimed = await db.billingEvent.updateMany({
+      where: {
+        id: existing.id,
+        status: { in: ['RECEIVED', 'FAILED'] },
+      },
+      data: {
+        status: 'PROCESSING',
+        payloadHash,
+        errorMessage: null,
+      },
+    })
+    if (claimed.count !== 1) {
+      const current = await db.billingEvent.findUnique({ where: { id: existing.id } })
+      return { received: true, duplicate: current?.status === 'PROCESSED', processing: current?.status === 'PROCESSING' }
     }
 
     try {
