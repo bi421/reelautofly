@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common'
+import { Body, Controller, Get, Post, Req, Res, UnauthorizedException } from '@nestjs/common'
 import { z } from 'zod'
 import type { Response } from 'express'
 import { AuthService } from './auth.service'
@@ -21,6 +21,15 @@ function cookieToken(req: any): string | undefined {
   } catch {
     return undefined
   }
+}
+
+function bearerToken(req: any): string | undefined {
+  const authorization = req.headers.authorization as string | undefined
+  if (!authorization) return undefined
+  if (!authorization.startsWith('Bearer ')) throw new UnauthorizedException('Invalid authorization scheme')
+  const token = authorization.slice(7).trim()
+  if (!token) throw new UnauthorizedException('Bearer token is required')
+  return token
 }
 
 function setSessionCookie(res: Response, token: string) {
@@ -64,9 +73,7 @@ export class AuthController {
 
   @Get('me')
   async me(@Req() req: any) {
-    const authorization = req.headers.authorization as string | undefined
-    const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined
-    const session = await this.auth.resolveSession(bearer || cookieToken(req))
+    const session = await this.auth.resolveSession(bearerToken(req) ?? cookieToken(req))
     if (!session) return { user: null }
     const user = await this.authUser(session.userId)
     return { user }
