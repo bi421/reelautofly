@@ -123,6 +123,16 @@ export class MetaGraphClient {
     return data as T
   }
 
+  async validateAccessToken(
+    accessToken: string,
+  ): Promise<{ id: string }> {
+    return this.request<{ id: string }>(
+      '/me?fields=id',
+      {},
+      accessToken,
+    )
+  }
+
   createIgContainer(
     igUserId: string,
     videoUrl: string,

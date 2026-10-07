@@ -1,12 +1,30 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { TokenGuard } from '../token.guard'
+vi.mock('../../meta-graph.client', () => ({
+  MetaGraphClient: class {
+    async validateAccessToken() {
+      return { id: 'ig_1' }
+    }
+  },
+  MetaGraphError: class extends Error {
+    categorize() {
+      return 'TOKEN_INVALID'
+    }
+  },
+}))
 import { RateGuard } from '../rate.guard'
 import { DuplicateGuard } from '../duplicate.guard'
 import { SpecGuard } from '../spec.guard'
 import { CopyrightGuard } from '../copyright.guard'
 import { ContentGuard } from '../content.guard'
 import { runAllGuards } from '../orchestrator'
+import { encrypt } from '@reelautofly/shared'
 import type { GuardrailContext } from '@reelautofly/shared'
+
+const TEST_ENCRYPTION_KEY =
+  '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+process.env.ENCRYPTION_KEY_32_BYTES = TEST_ENCRYPTION_KEY
 
 function makeTokenInput(overrides: Partial<Parameters<typeof TokenGuard.run>[0]> = {}) {
   return {
@@ -14,7 +32,10 @@ function makeTokenInput(overrides: Partial<Parameters<typeof TokenGuard.run>[0]>
     userId: 'user_1',
     provider: 'INSTAGRAM' as const,
     providerUserId: 'ig_1',
-    encryptedAccessToken: 'enc:iv:tag',
+    encryptedAccessToken: (() => {
+      const encrypted = encrypt('test-access-token', TEST_ENCRYPTION_KEY)
+      return encrypted.iv + ':' + encrypted.authTag + ':' + encrypted.encryptedData
+    })(),
     status: 'ACTIVE' as const,
     createdAt: new Date('2026-01-01'),
     ...overrides,

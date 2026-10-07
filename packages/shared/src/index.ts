@@ -7,7 +7,16 @@ export const UploadSchema = z.object({
 
 export type Upload = z.infer<typeof UploadSchema>
 
-export const JobStatusSchema = z.enum(['queued', 'scripting', 'rendering', 'guarding', 'publishing', 'done', 'failed'])
+export const JobStatusSchema = z.enum([
+  'QUEUED',
+  'SCRIPTING',
+  'RENDERING',
+  'GUARD_CHECK',
+  'READY',
+  'PUBLISHING',
+  'PUBLISHED',
+  'FAILED',
+])
 export type JobStatus = z.infer<typeof JobStatusSchema>
 
 export * from './guardrails/index'
