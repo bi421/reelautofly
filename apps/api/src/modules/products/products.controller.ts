@@ -50,6 +50,13 @@ export class ProductsController {
       })
     }
     const parsed = result.data
+    const imagePrefix = `users/${req.userId}/`
+    if (parsed.originalImages.some((key) => !key.startsWith(imagePrefix) || key.includes('..'))) {
+      throw new BadRequestException({
+        code: 'INVALID_IMAGE_KEY',
+        message: 'Image keys must belong to the authenticated user',
+      })
+    }
     const subscription = await db.subscription.findUnique({ where: { userId: req.userId } })
     const plan = subscription?.status === 'ACTIVE' ? subscription.plan : 'FREE'
     const limits = { FREE: 3, PRO: 100, TEAM: 500, ENTERPRISE: 10000 } as const
