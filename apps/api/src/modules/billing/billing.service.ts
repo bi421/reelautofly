@@ -87,7 +87,8 @@ export class BillingService {
     return { url: session.url }
   }
 
-  // Stripe may send multiple v1 signatures during secret rotation; any valid one is sufficient.\n  verifySignature(rawBody: Buffer, header: string | undefined): boolean {
+  // Stripe may send multiple v1 signatures during secret rotation; any valid one is sufficient.
+  verifySignature(rawBody: Buffer, header: string | undefined): boolean {
     const secret = process.env.STRIPE_WEBHOOK_SECRET
     if (!secret || !header) return false
 
