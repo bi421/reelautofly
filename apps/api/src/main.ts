@@ -37,6 +37,17 @@ function requireProductionEnv(): void {
   }
 }
 
+function applySecurityHeaders(res: any): void {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site')
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  }
+}
+
 async function bootstrap() {
   requireProductionEnv()
   const app = await NestFactory.create(AppModule, { rawBody: true })
@@ -44,8 +55,9 @@ async function bootstrap() {
     origin: process.env.WEB_ORIGIN?.split(',').map((value) => value.trim()) ?? ['http://localhost:3000'],
     credentials: true,
   })
-  app.use((req: any, _res: any, next: () => void) => {
+  app.use((req: any, res: any, next: () => void) => {
     req.cookies = parseCookies(req.headers.cookie)
+    applySecurityHeaders(res)
     next()
   })
   app.useGlobalGuards(app.get(AuthGuard))
