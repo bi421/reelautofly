@@ -122,7 +122,7 @@ async function processJob(job: Job<{ jobId: string }>) {
   try {
     await uploadRenderedReel(renderResult.outputPath, jobId)
   } catch (err) {
-    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `R2 upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`, attempts: { increment: 1 } }) })
+    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `R2 upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`, attempts: { increment: 1 } })
     throw err
   }
   const r2PublicUrl = `${publicBase}/reels/${jobId}.mp4`
@@ -141,7 +141,7 @@ async function processJob(job: Job<{ jobId: string }>) {
   await db.reelJob.update({ where: { id: jobId }, data: { guardResult: guardResult as any } })
   if (!guardResult.passed) {
     const failedNames = guardResult.failedGuards.join(', ')
-    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `Guard check failed: ${failedNames}`, attempts: { increment: 1 } }) })
+    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `Guard check failed: ${failedNames}`, attempts: { increment: 1 } })
     throw new Error(`Guard check failed: ${failedNames}`)
   }
   await db.reelJob.update({ where: { id: jobId }, data: { status: 'READY' } })
@@ -149,7 +149,7 @@ async function processJob(job: Job<{ jobId: string }>) {
     await publishService.publishReelJob(jobId)
     await schedulePublishRetry(jobId)
   } catch (err) {
-    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `Worker publish orchestration failed: ${err instanceof Error ? err.message : 'Unknown error'}`, attempts: { increment: 1 } }) })
+    await db.reelJob.update({ where: { id: jobId }, data: { status: 'FAILED', errorMessage: `Worker publish orchestration failed: ${err instanceof Error ? err.message : 'Unknown error'}`, attempts: { increment: 1 } })
     throw err
   }
 }
