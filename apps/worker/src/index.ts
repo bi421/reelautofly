@@ -27,7 +27,17 @@ const redisConnection = redisUrl
     }
 
 if (process.env.NODE_ENV === 'production') {
-  const required = ['DATABASE_URL', 'REDIS_URL', 'R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET', 'R2_PUBLIC_BASE_URL']
+  const required = [
+    'DATABASE_URL',
+    'REDIS_URL',
+    'R2_ENDPOINT',
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_BUCKET',
+    'R2_PUBLIC_BASE_URL',
+    'ENCRYPTION_KEY_32_BYTES',
+    'META_GRAPH_API_VERSION',
+  ]
   const missing = required.filter((name) => !process.env[name]?.trim())
   if (missing.length > 0) throw new Error(`Production worker environment is incomplete: missing ${missing.join(', ')}`)
   if (!redisUrl) throw new Error('REDIS_URL is required in production')
