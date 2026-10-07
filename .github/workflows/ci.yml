@@ -72,5 +72,5 @@ jobs:
       - run: pnpm db:generate
       - run: pnpm db:migrate:deploy
       - run: pnpm typecheck
-      - run: pnpm turbo run test --filter=@reelautofly/publisher
+      - run: pnpm test
       - run: pnpm build
