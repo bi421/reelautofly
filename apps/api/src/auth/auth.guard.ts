@@ -1,6 +1,19 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
 import { AuthService } from './auth.service'
 
+function sessionCookie(req: any): string | undefined {
+  const parsed = req.cookies?.raf_session
+  if (typeof parsed === 'string') return parsed
+  const header = req.headers.cookie as string | undefined
+  const value = header?.split(';').map((v: string) => v.trim()).find((v: string) => v.startsWith('raf_session='))
+  if (!value) return undefined
+  try {
+    return decodeURIComponent(value.slice('raf_session='.length))
+  } catch {
+    return undefined
+  }
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private readonly auth: AuthService) {}
@@ -11,10 +24,7 @@ export class AuthGuard implements CanActivate {
 
     const authorization = req.headers.authorization as string | undefined
     const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7) : undefined
-    const cookieHeader = req.headers.cookie as string | undefined
-    const cookie = cookieHeader?.split(';').map((v: string) => v.trim()).find((v: string) => v.startsWith('raf_session='))
-    const sessionToken = cookie ? decodeURIComponent(cookie.slice('raf_session='.length)) : undefined
-    const session = await this.auth.resolveSession(bearer || sessionToken)
+    const session = await this.auth.resolveSession(bearer || sessionCookie(req))
     if (!session) throw new UnauthorizedException('Authentication required')
     req.userId = session.userId
     req.sessionId = session.id
