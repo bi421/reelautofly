@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req } from '@nestjs/common'
+import { BadRequestException, Controller, Post, Body, Req } from '@nestjs/common'
 import { z } from 'zod'
 import { createHmac, createHash } from 'node:crypto'
 
@@ -47,7 +47,15 @@ function presignPut(endpoint: string, bucket: string, key: string, contentType: 
 export class UploadController {
   @Post('presign')
   async presign(@Req() req: any, @Body() body: unknown) {
-    const parsed = PresignSchema.parse(body)
+    const result = PresignSchema.safeParse(body)
+    if (!result.success) {
+      throw new BadRequestException({
+        code: 'INVALID_UPLOAD',
+        message: 'Invalid upload payload',
+        issues: result.error.issues,
+      })
+    }
+    const parsed = result.data
     const endpoint = process.env.R2_ENDPOINT
     const bucket = process.env.R2_BUCKET
     const accessKey = process.env.R2_ACCESS_KEY_ID
