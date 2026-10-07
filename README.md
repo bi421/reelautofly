@@ -17,7 +17,7 @@ graph LR
 ## Monorepo
 
 - `apps/web` — Next.js 15 frontend
-- `apps/api` — FastAPI backend
+- `apps/api` — NestJS backend
 - `apps/worker` — BullMQ background worker
 - `apps/publisher` — Meta API publishing microservice
 - `packages/db` — Prisma + PostgreSQL schema
